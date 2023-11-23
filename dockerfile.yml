@@ -1,0 +1,84 @@
+---
+- hosts: all
+  become: true
+  pre_tasks:
+
+  - name: install docker
+    shell:
+      sudo apt-get install docker.io -y
+    when: ansible_distribution == "Ubuntu"
+
+  - name: install docker
+    yum:
+      name: docker
+      state: present
+    when: ansible_distribution == "CentOS"
+
+  - name: install docker sdk
+    become: yes
+    shell:
+      cmd: /usr/bin/pip3 install docker-py
+
+
+  - name: start / enable docker service
+    service:
+      name: docker
+      state: started
+      enabled: true
+
+  - name: Ensure docker group exists
+    become: yes
+    group:
+      name: docker
+      state: present
+
+  - name: Add user to docker group
+    become: yes
+    user:
+      name: sher
+      groups: docker
+      append: yes
+
+  - name: restart docker service
+    service:
+      name: docker
+      state: restarted
+      enabled: true
+
+  - name: dockerfile directory 
+    file:
+      path: /root/demo-dockerfile
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: copy dockerfile
+    copy:
+      src: dockerfile
+      dest: /root/demo-dockerfile/dockerfile
+      owner: root
+      group: root
+      mode: '0755'
+    when: ansible_distribution == "Ubuntu"
+
+
+  - name: copy dockerfile
+    copy:
+      src: dockerfile2
+      dest: /root/demo-dockerfile/dockerfile
+      owner: root
+      group: root
+      mode: '0755'
+    when: ansible_distribution == "CentOS"
+
+  - name: build docker image
+    shell:
+      cmd: docker build -t docker_image /root/demo-dockerfile
+    when: ansible_distribution == "Ubuntu"
+
+
+  - name: build docker image
+    shell:
+      cmd: docker run -d -p 8080 --name docker_container5 docker_image
+    when: ansible_distribution == "Ubuntu"
